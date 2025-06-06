@@ -10,7 +10,7 @@ Flask-Session==0.8.0
 Flask==3.1.1
 Jinja2==3.1.6
 PyYAML==6.0.2
-SQLAlchemy==1.4.51
+SQLAlchemy==2.0.16
 #alembic==1.9.0
 bcrypt==4.3.0
 bravado-core==6.1.1
