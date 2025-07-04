@@ -939,6 +939,7 @@ def dyndns_update():
     # reference: https://help.dyn.com/remote-access-api/return-codes/
     hostname = request.args.get('hostname')
     myip = request.args.get('myip')
+    comment = request.args.get('comment', '')
 
     if not hostname:
         history = History(msg="DynDNS update: missing hostname parameter",
@@ -1017,7 +1018,24 @@ def dyndns_update():
                 history.add()
             else:
                 oldip = r.data
-                result = r.update(domain.name, str(ip))
+                rrset_data = [{
+                    "changetype": "REPLACE",
+                    "name": hostname + '.',
+                    "ttl": r.ttl,
+                    "type": rtype,
+                    "records": [{
+                        "content": str(ip),
+                        "disabled": False
+                    }],
+                    "comments": [{
+                        "content": comment,
+                        "account": current_user.username,
+                        "modified_at": datetime.datetime.utcnow().isoformat()
+                    }] if comment else []
+                }]
+                rrset = {"rrsets": rrset_data}
+                result = Record().add(domain.name, rrset)
+
                 if result['status'] == 'ok':
                     history = History(
                         msg='DynDNS update: updated {} successfully'.format(hostname),
@@ -1044,16 +1062,20 @@ def dyndns_update():
 
                 # Build the rrset
                 rrset_data = [{
-                    "changetype": "REPLACE",
-                    "name": hostname + '.',
-                    "ttl": 3600,
-                    "type": rtype,
-                    "records": [{
-                        "content": str(ip),
-                        "disabled": False
-                    }],
-                    "comments": []
-                }]
+                "changetype": "REPLACE",
+                "name": hostname + '.',
+                "ttl": 300,
+                "type": rtype,
+                "records": [{
+                    "content": str(ip),
+                    "disabled": False
+                }],
+                "comments": [{
+                    "content": comment,
+                    "account": current_user.username,
+                    "modified_at": datetime.datetime.utcnow().isoformat()
+                }] if comment else []
+            }]
 
                 # Format the rrset
                 rrset = {"rrsets": rrset_data}
