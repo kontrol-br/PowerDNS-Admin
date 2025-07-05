@@ -5,6 +5,7 @@ from flask_mail import Mail
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_session import Session
 from .lib import utils
+from powerdnsadmin.routes.dyndns import dyndns
 
 
 def create_app(config=None):
@@ -77,6 +78,8 @@ def create_app(config=None):
     models.init_app(app)
     routes.init_app(app)
     services.init_app(app)
+
+    app.register_blueprint(dyndns)
 
     # Register filters
     app.jinja_env.filters['display_record_name'] = utils.display_record_name
