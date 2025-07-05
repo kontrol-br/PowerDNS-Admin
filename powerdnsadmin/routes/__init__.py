@@ -21,8 +21,8 @@ def init_app(app):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(domain_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(api_bp)
-    app.register_blueprint(apilist_bp)
+    app.register_blueprint(api_bp, url_prefix='/api/v1')
+    app.register_blueprint(apilist_bp, url_prefix='/api')
 
     app.register_error_handler(400, handle_bad_request)
     app.register_error_handler(401, handle_unauthorized_access)
