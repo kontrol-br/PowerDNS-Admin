@@ -3,6 +3,11 @@ import secrets
 import string
 from base64 import b64encode
 from urllib.parse import urljoin
+from flask import request
+from werkzeug.security import check_password_hash
+from powerdnsadmin.models.user import User
+from powerdnsadmin.models.record import Record
+
 
 from flask import (Blueprint, g, request, abort, current_app, make_response, jsonify)
 from flask_login import current_user
@@ -50,10 +55,10 @@ account_single_schema = AccountSchema()
 
 def is_custom_header_api():
     custom_header_setting = Setting().get('custom_history_header')
-    if custom_header_setting != '' and custom_header_setting in request.headers: 
-        return request.headers[custom_header_setting] 
-    else: 
-        return g.apikey.description 
+    if custom_header_setting != '' and custom_header_setting in request.headers:
+        return request.headers[custom_header_setting]
+    else:
+        return g.apikey.description
 
 def get_user_domains():
     domains = db.session.query(Domain) \
@@ -241,16 +246,63 @@ def api_login_create_zone():
     return resp.content, resp.status_code, resp.headers.items()
 
 
+from flask import Blueprint, request, jsonify
+from flask_login import current_user
+from powerdnsadmin.models.domain import Domain
+from powerdnsadmin.models.domain_user import DomainUser
+from powerdnsadmin.models.account import Account
+from powerdnsadmin.models.account_user import AccountUser
+from powerdnsadmin.decorators import api_basic_auth, dyndns_login_required
+from powerdnsadmin.lib.schema import DomainSchema
+domain_schema = DomainSchema(many=True)
+from sqlalchemy import or_
+
+
 @api_bp.route('/pdnsadmin/zones', methods=['GET'])
 @api_basic_auth
-def api_login_list_zones():
+@dyndns_login_required
+def api_list_zones():
     if current_user.role.name not in ['Administrator', 'Operator']:
-        domain_obj_list = get_user_domains()
+        domain_obj_list = get_user_domains_for(current_user)
     else:
         domain_obj_list = Domain.query.all()
 
     domain_obj_list = [] if domain_obj_list is None else domain_obj_list
     return jsonify(domain_schema.dump(domain_obj_list)), 200
+
+@api_bp.route('/pdnsadmin/zones/<zone_name>/records', methods=['GET'])
+@api_basic_auth
+@dyndns_login_required
+def api_list_records(zone_name):
+    from flask import jsonify
+    from powerdnsadmin.models.record import Record
+
+    try:
+        record_obj = Record()
+        rrsets = record_obj.get_rrsets(zone_name)
+        return jsonify(rrsets), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def get_user_domains_for(user):
+    from powerdnsadmin.models.domain import Domain
+    from powerdnsadmin.models.domain_user import DomainUser
+    from powerdnsadmin.models.account import Account
+    from powerdnsadmin.models.account_user import AccountUser
+    from sqlalchemy import or_
+
+    domains = Domain.query \
+        .outerjoin(DomainUser, Domain.id == DomainUser.domain_id) \
+        .outerjoin(Account, Domain.account_id == Account.id) \
+        .outerjoin(AccountUser, Account.id == AccountUser.account_id) \
+        .filter(
+            or_(
+                DomainUser.user_id == user.id,
+                AccountUser.user_id == user.id
+            )).all()
+    return domains
+
 
 
 @api_bp.route('/pdnsadmin/zones/<string:domain_name>', methods=['DELETE'])
