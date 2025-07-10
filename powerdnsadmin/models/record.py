@@ -15,6 +15,24 @@ from .domain import Domain
 from .domain_setting import DomainSetting
 
 
+
+class RecordDB(db.Model):
+    __tablename__ = 'records'
+
+    id = db.Column(db.Integer, primary_key=True)
+    domain_id = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String, nullable=False)
+    type = db.Column(db.String, nullable=False)
+    content = db.Column(db.String, nullable=False)
+    ttl = db.Column(db.Integer, default=3600)
+    prio = db.Column(db.Integer)
+    change_date = db.Column(db.Integer)
+    auth = db.Column(db.Boolean, default=True)
+    disabled = db.Column(db.Boolean, default=False)  
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
+
 def by_record_content_pair(e):
     return e[0]['content']
 

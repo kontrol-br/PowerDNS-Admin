@@ -44,36 +44,40 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             <div class="dropdown-menu" aria-labelledby="dropdownMenu">
+
+                <!-- Todos podem ver Edit Records -->
                 <button class="dropdown-item btn-success" type="button"
                         onclick="window.location.href='{{ url_for('domain.domain', domain_name=domain.name) }}'">
                     <i class="fa-solid fa-pencil"></i>&nbsp;Edit Records
                 </button>
 
-                {% if current_user.role.name in ['Administrator', 'Operator'] %}
+                <!-- Mostrar todas as outras opções se for admin/operator ou dono da zona -->
+                {% if current_user.role.name in ['Administrator', 'Operator'] or domain.owner_id == current_user.id %}
                     <button class="dropdown-item btn-danger" type="button"
                             onclick="window.location.href='{{ url_for('domain.setting', domain_name=domain.name) }}'">
                         <i class="fa-solid fa-cog"></i>&nbsp;Zone Settings
                     </button>
+
                     <button class="dropdown-item btn-success button_template" id="{{ domain.name }}" type="button">
                         <i class="fa-solid fa-clone"></i>&nbsp;Create Template
                     </button>
-                {% endif %}
 
-                {% if current_user.role.name in ['Administrator', 'Operator'] or allow_user_view_history %}
                     <button class="dropdown-item btn-primary" type="button"
                             onclick="window.location.href='{{ url_for('domain.changelog', domain_name=domain.name) }}'">
                         <i class="fa-solid fa-history" aria-hidden="true"></i>&nbsp;Zone Changelog
                     </button>
-                {% endif %}
 
-                {% if current_user.role.name in ['Administrator', 'Operator'] or allow_user_remove_domain %}
+                    <!-- Remove Zone: sempre disponível para admin/operator ou se for dono da zona -->
                     <div class="dropdown-divider"></div>
                     <button type="button" class="dropdown-item btn-secondary button_delete"
                             onclick="window.location.href='{{ url_for('domain.remove') }}'">
                         <span style="color: red;"><i class="fa-solid fa-trash"></i>&nbsp;Remove Zone</span>
                     </button>
                 {% endif %}
+
             </div>
         </div>
     </td>
 {% endmacro %}
+
+

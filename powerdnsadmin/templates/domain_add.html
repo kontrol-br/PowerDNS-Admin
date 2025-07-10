@@ -48,15 +48,20 @@
                                         <label for="domain_override">Zone Override Record</label>
                                     </div>
                                 {% endif %}
-                                <div class="form-group">
-                                    <label for="selAccount">Account</label>
-                                    <select name="accountid" id="selAccount" class="form-control">
-                                        <option value="0">- No Account -</option>
-                                        {% for account in accounts %}
-                                            <option value="{{ account.id }}">{{ account.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
+                                 
+								 {% if current_user.role.name in ['Administrator', 'Operator'] %}
+									<div class="form-group">
+										<label for="selAccount">Account</label>
+										<select name="accountid" id="selAccount" class="form-control">
+											<option value="0">- No Account -</option>
+											{% for account in accounts %}
+												<option value="{{ account.id }}">{{ account.name }}</option>
+											{% endfor %}
+										</select>
+									</div>
+								{% endif %}
+								 
+								 
                                 <div class="form-group">
                                     <label>Zone Type</label>
                                     <div class="radio">

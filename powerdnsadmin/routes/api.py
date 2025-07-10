@@ -5,8 +5,15 @@ from base64 import b64encode
 from urllib.parse import urljoin
 from flask import request
 from werkzeug.security import check_password_hash
-from powerdnsadmin.models.user import User
-from powerdnsadmin.models.record import Record
+from ..models.user import User
+from ..models.record import Record
+from flask import jsonify
+from ..models.record import RecordDB
+from ..models.domain import Domain
+from ..models.domain_user import DomainUser
+from ..models.account import Account
+from ..models.account_user import AccountUser
+from sqlalchemy import or_
 
 
 from flask import (Blueprint, g, request, abort, current_app, make_response, jsonify)
@@ -269,6 +276,59 @@ def api_list_zones():
 
     domain_obj_list = [] if domain_obj_list is None else domain_obj_list
     return jsonify(domain_schema.dump(domain_obj_list)), 200
+
+
+
+
+
+@api_bp.route('/pdnsadmin/user/records/a', methods=['GET'])
+@api_basic_auth
+@dyndns_login_required
+def api_list_user_a_records():
+    try:
+        # 1. Buscar todos os domínios relacionados ao usuário logado
+        domains = Domain.query \
+            .outerjoin(DomainUser, Domain.id == DomainUser.domain_id) \
+            .outerjoin(Account, Domain.account_id == Account.id) \
+            .outerjoin(AccountUser, Account.id == AccountUser.account_id) \
+            .filter(
+                or_(
+                    DomainUser.user_id == current_user.id,
+                    AccountUser.user_id == current_user.id,
+                    Domain.owner_id == current_user.id
+                )
+            ).all()
+
+        domain_ids = [d.id for d in domains]
+
+        # 2. Buscar todos os registros do tipo A pertencentes ao usuário, nestes domínios
+        records = RecordDB.query \
+            .filter(
+                RecordDB.domain_id.in_(domain_ids),
+                RecordDB.type == 'A',
+                RecordDB.owner_id == current_user.id
+            ).all()
+
+        # 3. Formatar para saída JSON, usando o nome do domínio da lista já carregada
+        result = [{
+            'name': r.name,
+            'type': r.type,
+            'ttl': r.ttl,
+            'content': r.content,
+            'disabled': r.disabled,
+            'domain': next((d.name for d in domains if d.id == r.domain_id), None)
+        } for r in records]
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+
+
 
 @api_bp.route('/pdnsadmin/zones/<zone_name>/records', methods=['GET'])
 @api_basic_auth

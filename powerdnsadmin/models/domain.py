@@ -27,22 +27,24 @@ class Domain(db.Model):
     last_check = db.Column(db.Integer)
     dnssec = db.Column(db.Integer)
     account_id = db.Column(db.Integer, db.ForeignKey('account.id'))
+    owner_id = db.Column(db.Integer, nullable=True)
     account = db.relationship("Account", back_populates="domains")
-    settings = db.relationship('DomainSetting', back_populates='domain')
+    settings = db.relationship('DomainSetting', back_populates='domain')  
     apikeys = db.relationship("ApiKey",
                               secondary=domain_apikey,
                               back_populates="domains")
 
     def __init__(self,
-                 id=None,
-                 name=None,
-                 master=None,
-                 type='NATIVE',
-                 serial=None,
-                 notified_serial=None,
-                 last_check=None,
-                 dnssec=None,
-                 account_id=None):
+             id=None,
+             name=None,
+             master=None,
+             type='NATIVE',
+             serial=None,
+             notified_serial=None,
+             last_check=None,
+             dnssec=None,
+             account_id=None,
+             owner_id=None):  # <-- Novo parâmetro adicionado
         self.id = id
         self.name = name
         self.master = master
@@ -52,11 +54,13 @@ class Domain(db.Model):
         self.last_check = last_check
         self.dnssec = dnssec
         self.account_id = account_id
-        # PDNS configs
+        self.owner_id = owner_id  # <-- Atribuição adicionada
         self.PDNS_STATS_URL = Setting().get('pdns_api_url')
         self.PDNS_API_KEY = Setting().get('pdns_api_key')
         self.PDNS_VERSION = Setting().get('pdns_version')
         self.API_EXTENDED_URL = utils.pdns_api_extended_uri(self.PDNS_VERSION)
+
+
 
     def __repr__(self):
         return '<Domain {0}>'.format(self.name)
@@ -482,24 +486,24 @@ class Domain(db.Model):
         if re.search('ip6.arpa', reverse_host_address):
             for i in range(1, 32, 1):
                 address = re.search(
-                    '((([a-f0-9]\.){' + str(i) + '})(?P<ipname>.+6.arpa)\.?)',
+                    '((([a-f0-9]\\.){' + str(i) + '})(?P<ipname>.+6.arpa)\\.?)',
                     reverse_host_address)
                 if None != self.get_id_by_name(address.group('ipname')):
                     c = i
                     break
             return re.search(
-                '((([a-f0-9]\.){' + str(c) + '})(?P<ipname>.+6.arpa)\.?)',
+                '((([a-f0-9]\\.){' + str(c) + '})(?P<ipname>.+6.arpa)\\.?)',
                 reverse_host_address).group('ipname')
         else:
             for i in range(1, 4, 1):
                 address = re.search(
-                    '((([0-9]+\.){' + str(i) + '})(?P<ipname>.+r.arpa)\.?)',
+                    '((([0-9]+\\.){' + str(i) + '})(?P<ipname>.+r.arpa)\\.?)',
                     reverse_host_address)
                 if None != self.get_id_by_name(address.group('ipname')):
                     c = i
                     break
             return re.search(
-                '((([0-9]+\.){' + str(c) + '})(?P<ipname>.+r.arpa)\.?)',
+                '((([0-9]+\\.){' + str(c) + '})(?P<ipname>.+r.arpa)\\.?)',
                 reverse_host_address).group('ipname')
 
     def delete(self, domain_name):

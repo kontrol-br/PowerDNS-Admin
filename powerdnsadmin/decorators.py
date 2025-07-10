@@ -104,16 +104,25 @@ def can_remove_domain(f):
     """
     Grant access if:
         - user is in Operator role or higher, or
-        - allow_user_remove_domain is on
+        - user is owner of at least one domain
+        - or Setting.allow_user_remove_domain is on
     """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.role.name not in [
-            'Administrator', 'Operator'
-        ] and not Setting().get('allow_user_remove_domain'):
-            abort(403)
-        return f(*args, **kwargs)
+        if current_user.role.name in ['Administrator', 'Operator']:
+            return f(*args, **kwargs)
+
+        # ✅ Permitir se for dono de pelo menos uma zona
+        owns_zones = Domain.query.filter(Domain.owner_id == current_user.id).first()
+        if owns_zones:
+            return f(*args, **kwargs)
+
+        # ✅ Ou se a flag estiver ativada
+        if Setting().get('allow_user_remove_domain'):
+            return f(*args, **kwargs)
+
+        abort(403)
 
     return decorated_function
 
